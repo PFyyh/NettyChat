@@ -10,19 +10,16 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 
-@Slf4j
-public class BondingQuestion {
-
-
+public class LineBasedFrame {
     private static class BondingServer {
-        private NioEventLoopGroup nioEventLoopGroup;
+        private final NioEventLoopGroup nioEventLoopGroup;
 
         public BondingServer() {
             nioEventLoopGroup = new NioEventLoopGroup();
@@ -33,7 +30,9 @@ public class BondingQuestion {
                     .childHandler(new ChannelInitializer<NioSocketChannel>() {
                         @Override
                         protected void initChannel(NioSocketChannel nioSocketChannel) throws Exception {
-                            nioSocketChannel.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG));
+                            nioSocketChannel.pipeline()
+                                    .addLast(new LineBasedFrameDecoder(1024))
+                                    .addLast(new LoggingHandler(LogLevel.DEBUG));
                         }
                     }).bind(9000);
         }
@@ -44,7 +43,7 @@ public class BondingQuestion {
     }
 
     private static class BondingClient {
-        private NioEventLoopGroup nioEventLoopGroup;
+        private final NioEventLoopGroup nioEventLoopGroup;
 
         public BondingClient(String msg) {
             nioEventLoopGroup = new NioEventLoopGroup();
@@ -59,7 +58,7 @@ public class BondingQuestion {
                                 final ByteBuf buffer = ctx.alloc().buffer(16);
                                 buffer.writeBytes(msg.getBytes(StandardCharsets.UTF_8));
                                 ctx.writeAndFlush(buffer);
-                                ctx.channel().close();
+//                                ctx.channel().close();
                             }
                         }).connect(new InetSocketAddress(9000)).sync();
                 channelFuture.channel().closeFuture().sync();
@@ -79,11 +78,10 @@ public class BondingQuestion {
     public static void main(String[] args) throws InterruptedException {
         final BondingServer bondServer = new BondingServer();
         for (int i = 0; i < 10; i++) {
-            final BondingClient bondingClient = new BondingClient("qwe123");
+            final BondingClient bondingClient = new BondingClient("1q2w3e4r1q2w\n3e4r1q2w3e4r1q2w3e4\nr1q2w3e4r1q2w3e4r1q2w3e4r\n");
+            bondingClient.close();
         }
-       /* Thread.sleep(5000);
+        Thread.sleep(5000);
         bondServer.close();
-        bondingClient.close();
-*/
     }
 }
